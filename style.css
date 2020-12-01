@@ -1,0 +1,51 @@
+body {
+    margin: 0px;
+}
+.layout-top {
+    height: 10vh;
+    border: 1px solid green;
+}
+#main {
+    display: flex;
+    height: 80vh;
+    justify-content: center;
+    align-items: center;
+}
+.layout-bottom {
+    height: 10vh;
+}
+#board {
+    height: 640px;
+    width: 300px;
+    border: 1px solid black;
+}
+.cell {
+    height: 30px;
+    width: 30px;
+    border: 1px solid gray;
+}
+.row {
+    display: flex;
+    flex-direction: row;
+}
+.color-0 {
+    background-color: yellow;
+}
+.color-1 {
+    background-color:lightblue;
+}
+.color-2 {
+    background-color:green;
+}
+.color-3 {
+    background-color: red;
+}
+.color-4 {
+    background-color: orange;
+}
+.color-5 {
+    background-color: blue;
+}
+.color-6 {
+    background-color: violet;
+}
