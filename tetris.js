@@ -6,7 +6,8 @@ class Tetris {
         this.brickFallPeriod = 60
         this.waitedFrames = 0
         this.Directions = Object.freeze({LEFT: 0, DOWN: 1, RIGHT: 2})
-        this.nextBricks = []
+        this.score = 0
+        this.alreadyHeld = false
         this.bricks = 
         [
             {
@@ -87,8 +88,10 @@ class Tetris {
                 kind: 6
             }
         ]
+        this.nextBricks = []
         this.currentBrick = this.getNewBrick()
-        console.log(this.currentBrick)
+        this.heldBrick = null
+
         let stateRow = []
         for (let i = 0; i < 10; i++) {
             stateRow.push(-1)
@@ -106,7 +109,7 @@ class Tetris {
         this.thisBoundHandleUsercontrol = this.handleUserControl.bind(this)
     }
     getNewBrick() {
-        if(this.nextBricks.length === 0) {
+        if(this.nextBricks.length <= 3) {
             let shffledBricks = this.bricks.slice()
             let dst
             let src
@@ -120,23 +123,24 @@ class Tetris {
             for(let brick of shffledBricks){ 
                 this.nextBricks.push({
                     x: 3,
-                    y: -4,
+                    y: -5,
                     ...brick
                 })
             } 
+        }
+        for(let i = 0; i < 3; i++) {
+            this.drawBrickAt(this.nextBricks[i+1], document.getElementById(`next-${i}`))
         }
         return this.nextBricks.shift()
     }
     drawPart(y, x, color) {
         if(y < 0) return
-        let cellElem = document.createElement("div")
-        cellElem.className = "cell"
+        let className = "cell"
         if(color >= 0) {
-            cellElem.className += (` color-${color}`)
+            className += (` color-${color}`)
         }
         const id = "cell_" + x + "_" + y
-        cellElem.id = id
-        document.getElementById(id).replaceWith(cellElem)
+        document.getElementById(id).className = className
     }
     drawAll() {
         this.board = document.createElement("div")
@@ -212,6 +216,22 @@ class Tetris {
     isContinued(absPartY, _) {
         if(absPartY < 0) return false
     }
+    drawBrickAt(brick, elem) {
+        let rows = elem.getElementsByClassName("row")
+        let cells
+        for(let partY = 0; partY < 4; partY++) {
+            cells = rows[partY].getElementsByTagName("div")
+            for(let partX = 0; partX < 4; partX++) {
+                if(brick.shape[partY][partX] == 1) {
+                    const className = `cell color-${brick.kind}`
+                    cells[partX].className = className
+                }
+                else {
+                    cells[partX].className = 'cell'
+                }
+            }
+        }
+    }
     moveBrick (direction) {
         this.pause()
         const {x, y} = this.currentBrick
@@ -236,7 +256,7 @@ class Tetris {
         }
         this.currentBrick.y += 1
         if(!this.isPlaceable()) {
-            this.waitedFrames = Math.floor(this.brickFallPeriod / 2)
+            this.waitedFrames = 0
         }
         this.currentBrick.y -= 1
         this.start()
@@ -275,6 +295,32 @@ class Tetris {
         }
         this.drawBrick()
     }
+    holdBrick() {
+        if(!this.alreadyHeld){
+            this.pause()
+            this.eraseBrick()
+
+            const tmp = this.currentBrick
+
+            if(this.heldBrick) {
+            this.currentBrick = this.heldBrick    
+            }
+            else {
+                this.currentBrick = this.getNewBrick()
+            }
+            this.heldBrick = {
+                shape: this.bricks[tmp.kind],
+                ...tmp,
+                x: 3,
+                y: -5
+            }
+            this.drawBrickAt(this.heldBrick, document.getElementById("hold"))
+            this.drawBrick()
+            this.waitedFrames = this.brickFallPeriod
+            this.start()   
+            this.alreadyHeld = true
+        }
+    }
     hardDrop() {
         this.pause()
         this.eraseBrick()
@@ -283,10 +329,16 @@ class Tetris {
         }
         this.currentBrick.y -= 1
         this.drawBrick()
+        if(!this.isContinued()){
+            this.gameover()
+            return
+        }
         this.confirmBrick()
+        this.alreadyHeld = false
+        this.score += 2
         this.checkLines()
         this.currentBrick = this.getNewBrick()
-        this.waitedFrames = 0
+        this.waitedFrames = this.brickFallPeriod
         this.start()
     }
     clearLine(y) {
@@ -300,6 +352,7 @@ class Tetris {
     }
     checkLines() {
         let lineCleared
+        let clearedLines = 0
         for(let y = 0; y < 20; y++) {
             lineCleared = true
             for(let x = 0; x < 10; x++) {
@@ -310,9 +363,14 @@ class Tetris {
             }
             if(lineCleared) {
                 this.clearLine(y)
+                clearedLines ++
                 y--
             }
         }
+        if (clearedLines > 0) {
+            this.score += (10 * clearedLines)
+        }
+        document.getElementById("score-box").innerHTML = this.score
     }
     updateFrame() {
         if(this.waitedFrames >= this.brickFallPeriod) {
@@ -329,10 +387,14 @@ class Tetris {
                     return
                 }
                 this.confirmBrick()
+                this.alreadyHeld = false
+                this.score += 1
                 this.checkLines()
                 this.currentBrick = this.getNewBrick()
             }
             this.waitedFrames = 0
+            const nextbrickFallPeriod = 60 - parseInt(this.score / 20)
+            this.brickFallPeriod = (nextbrickFallPeriod > 10) ? nextbrickFallPeriod : 10
         }
         this.waitedFrames += 1
     }
@@ -353,6 +415,9 @@ class Tetris {
             case " ":
                 this.hardDrop()
                 break
+            case "z":
+                this.holdBrick()
+                break
         }
     }
     start() {
@@ -369,7 +434,7 @@ class Tetris {
     }
     gameover() {
         this.pause()
-        console.log("Game Over !!!")
+        document.getElementById("gameover-box").style.display = "block"
     }
 
 }
