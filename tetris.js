@@ -6,6 +6,7 @@ class Tetris {
         this.brickFallPeriod = 60
         this.waitedFrames = 0
         this.Directions = Object.freeze({LEFT: 0, DOWN: 1, RIGHT: 2})
+        this.nextBricks = []
         this.bricks = 
         [
             {
@@ -16,7 +17,8 @@ class Tetris {
                     [0, 1, 1, 0], 
                     [0, 1, 1, 0]
                 ],
-                rotateShape: null
+                rotateShape: null,
+                kind: 0
             }, 
             {
                 shape:
@@ -26,7 +28,8 @@ class Tetris {
                     [0, 0, 1, 0],
                     [0, 0, 1, 0]
                 ],
-                rotateShape: 2
+                rotateShape: 2,
+                kind: 1
             }, 
             {
                 shape:
@@ -36,7 +39,8 @@ class Tetris {
                     [0, 0, 1, 1], 
                     [0, 1, 1, 0]
                 ],
-                rotateShape: 4
+                rotateShape: 4,
+                kind: 2
             }, 
             {
                 shape:
@@ -46,7 +50,8 @@ class Tetris {
                     [0, 1, 1, 0], 
                     [0, 0, 1, 1]
                 ],
-                rotateShape: 4
+                rotateShape: 4,
+                kind: 3
             },
             {   
                 shape:
@@ -56,7 +61,8 @@ class Tetris {
                     [0, 0, 1, 0], 
                     [0, 0, 1, 1]
                 ],
-                rotateShape: 4
+                rotateShape: 4,
+                kind: 4
             }, 
             {
                 shape:
@@ -66,7 +72,8 @@ class Tetris {
                     [0, 0, 1, 0], 
                     [0, 1, 1, 0]
                 ],
-                rotateShape: 4
+                rotateShape: 4,
+                kind: 5
             },
             {
                 shape:
@@ -76,11 +83,12 @@ class Tetris {
                     [0, 0, 1, 1], 
                     [0, 0, 1, 0]
                 ],
-                rotateShape: 4
+                rotateShape: 4,
+                kind: 6
             }
         ]
         this.currentBrick = this.getNewBrick()
-
+        console.log(this.currentBrick)
         let stateRow = []
         for (let i = 0; i < 10; i++) {
             stateRow.push(-1)
@@ -98,13 +106,26 @@ class Tetris {
         this.thisBoundHandleUsercontrol = this.handleUserControl.bind(this)
     }
     getNewBrick() {
-        const kind = Math.floor(Math.random() * 7)
-        return {
-            x: 3,
-            y: -4,
-            kind: kind,
-            ...this.bricks[kind]
+        if(this.nextBricks.length === 0) {
+            let shffledBricks = this.bricks.slice()
+            let dst
+            let src
+            for(let k = 0; k < 21; k++) {
+                src = (k % 7)
+                dst = Math.floor(Math.random() * 7)
+                const tmp = shffledBricks[dst]
+                shffledBricks[dst] = shffledBricks[src]
+                shffledBricks[src] = tmp
+            }
+            for(let brick of shffledBricks){ 
+                this.nextBricks.push({
+                    x: 3,
+                    y: -4,
+                    ...brick
+                })
+            } 
         }
+        return this.nextBricks.shift()
     }
     drawPart(y, x, color) {
         if(y < 0) return
@@ -254,6 +275,20 @@ class Tetris {
         }
         this.drawBrick()
     }
+    hardDrop() {
+        this.pause()
+        this.eraseBrick()
+        while(this.isPlaceable()) {
+            this.currentBrick.y += 1
+        }
+        this.currentBrick.y -= 1
+        this.drawBrick()
+        this.confirmBrick()
+        this.checkLines()
+        this.currentBrick = this.getNewBrick()
+        this.waitedFrames = 0
+        this.start()
+    }
     clearLine(y) {
         this.state.splice(y, 1)
         let emptyLine = []
@@ -261,8 +296,7 @@ class Tetris {
             emptyLine.push(-1)
         }
         this.state.unshift(emptyLine)
-        this.drawAll()
-        
+        this.drawAll() 
     }
     checkLines() {
         let lineCleared
@@ -315,6 +349,10 @@ class Tetris {
                 break
             case "ArrowUp":
                 this.rotateBrick()
+                break
+            case " ":
+                this.hardDrop()
+                break
         }
     }
     start() {
